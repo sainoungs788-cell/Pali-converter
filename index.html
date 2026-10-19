@@ -1,276 +1,304 @@
-# Bidirectional Roman Pali <-> Shan Pali Converter (Complete Mapping)
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#183b36">
+<title>Roman Pali ↔ Shan Pali Converter</title>
+<style>
+  :root { color-scheme: light; --ink:#17332f; --muted:#62736f; --accent:#176b59; --paper:#f4f8f6; --card:#fff; --line:#dce7e2; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:system-ui,-apple-system,"Noto Sans Myanmar",sans-serif; color:var(--ink); background:var(--paper); }
+  header { background:#183b36; color:white; padding:28px 18px 24px; text-align:center; }
+  header h1 { margin:0 0 8px; font-size:clamp(1.45rem,4vw,2.1rem); }
+  header p { margin:0; opacity:.88; }
+  main { max-width:900px; padding:20px 14px 40px; margin:auto; }
+  .panel { background:var(--card); border:1px solid var(--line); border-radius:18px; padding:18px; box-shadow:0 5px 22px #183b360b; }
+  .direction { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
+  button { border:0; border-radius:10px; padding:11px 14px; font:inherit; font-weight:650; cursor:pointer; }
+  button:focus-visible, textarea:focus-visible { outline:3px solid #76b8a6; outline-offset:2px; }
+  .dir { background:#e9f1ed; color:var(--ink); flex:1; min-width:150px; }
+  .dir.active { background:var(--accent); color:white; }
+  label { display:block; font-weight:700; margin:12px 0 8px; }
+  textarea { width:100%; min-height:155px; resize:vertical; padding:14px; border:1px solid #cbdad4; border-radius:12px; font:1.05rem/1.65 system-ui,"Noto Sans Myanmar",sans-serif; color:var(--ink); background:white; }
+  #output { background:#f8fbf9; }
+  .actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; }
+  .primary { background:var(--accent); color:white; }
+  .secondary { background:#e9f1ed; color:var(--ink); }
+  .status { min-height:1.5em; margin:10px 2px 0; color:var(--muted); font-size:.9rem; }
+  details { margin-top:18px; color:var(--muted); font-size:.94rem; }
+  summary { cursor:pointer; font-weight:700; color:var(--ink); }
+  .foot { text-align:center; color:var(--muted); font-size:.85rem; padding:20px 8px 0; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Roman Pali ↔ Shan Pali</h1>
+  <p>A simple, bidirectional text converter</p>
+</header>
+<main>
+  <section class="panel">
+    <div class="direction" aria-label="Conversion direction">
+      <button class="dir active" id="romanMode" type="button">Roman → Shan</button>
+      <button class="dir" id="shanMode" type="button">Shan → Roman</button>
+    </div>
+    <label id="inputLabel" for="input">Roman Pali input</label>
+    <textarea id="input" spellcheck="false" placeholder="Type or paste Roman Pali here…"></textarea>
+    <div class="actions">
+      <button class="primary" id="convert" type="button">Convert</button>
+      <button class="secondary" id="swap" type="button">Swap direction</button>
+      <button class="secondary" id="clear" type="button">Clear</button>
+    </div>
+    <label id="outputLabel" for="output">Shan Pali output</label>
+    <textarea id="output" readonly spellcheck="false" placeholder="Converted text will appear here…"></textarea>
+    <div class="actions">
+      <button class="primary" id="copy" type="button">Copy output</button>
+      <button class="secondary" id="useOutput" type="button">Use output as input</button>
+    </div>
+    <p class="status" id="status" role="status" aria-live="polite"></p>
+    <details>
+      <summary>About this converter</summary>
+      <p>This page uses a character mapping, not a Pali dictionary or spell-checker. It preserves spaces and punctuation. If several Roman spellings map to the same Shan spelling, reverse conversion uses the first mapping registered, so reverse conversion may not always recover the exact original spelling.</p>
+      <p>Some entries in the supplied mapping were inconsistent or missing. Review the mapping rules in this file if you need a particular traditional spelling.</p>
+    </details>
+  </section>
+  <p class="foot">Works locally in your browser. No account or server required.</p>
+</main>
+<script>
+"use strict";
 
-roman_to_shan = {
-    # Independent Vowels
-    "aṃ": "ဢံ", "a": "ဢ", "ā": "ဢႃ", "i": "ဢိ", "ī": "ဢီ", 
-    "u": "ဢု", "ū": "ဢူ", "e": "ဢေ", "o": "ဢေႃ", "uṃ": "ဢုံ",
-    
-    # --- Medial Ya (ျ) Combinations with Vowels ---
-    "kyā": "ၵျႃ", "khiā": "ၶျႃ", "gyā": "ၷျႃ", "ghyā": "ꧠျႃ", "ṅyā": "ငျႃ",
-    "cyā": "ၸျႃ", "chyā": "ꧡျႃ", "jyā": "ꩡျႃ", "jhyā": "ꧢျႃ", "ñyā": "ၺျႃ",
-    "ṭyā": "ꩦျႃ", "ṭhyā": "ꩧျႃ", "ḍyā": "ꩨျႃ", "ḍhyā": "ꩩျႃ", "ṇyā": "ꧣျႃ",
-    "tyā": "တျႃ", "thyā": "ထျႃ", "dyā": "ၻျႃ", "dhyā": "ꩪျႃ", "nyā": "ၼျႃ",
-    "pyā": "ပျႃ", "phyā": "ၽျႃ", "byā": "ၿျႃ", "bhyā": "ꧤျႃ", "myā": "မျႃ",
-    "syā": "သျႃ", "hyā": "ႁျႃ", "ḷyā": "ꩮျႃ",
+/*
+  Mapping rules are generated from the consonant/vowel tables below.
+  Edit these tables to adjust your preferred Roman ↔ Shan spelling.
+*/
+const romanToShan = Object.create(null);
+function add(roman, shan) {
+  if (roman && shan && !Object.prototype.hasOwnProperty.call(romanToShan, roman)) {
+    romanToShan[roman] = shan;
+  }
+}
+const vowels = {
+  a: "", ā: "ႃ", i: "ိ", ī: "ီ", u: "ု", ū: "ူ", e: "ေ", o: "ေႃ"
+};
+const independentVowels = {
+  "aṃ":"ဢံ", "a":"ဢ", "ā":"ဢႃ", "i":"ဢိ", "ī":"ဢီ",
+  "u":"ဢု", "ū":"ဢူ", "e":"ဢေ", "o":"ဢေႃ", "uṃ":"ဢုံ"
+};
+Object.entries(independentVowels).forEach(([r,s]) => add(r,s));
 
-    "kya": "ၵျ", "kyi": "ၵျိ", "kyī": "ၵျီ", "kyu": "ၵျု", "kyū": "ၵျူ", "kye": "ၵျေ", "kyo": "ၵျေႃ",
-    "ṅya": "ငျ", "ṅyi": "ငျိ", "ṅyī": "ငျီ", "ṅyu": "ငျု", "ṅyū": "ငျူ", "ṅye": "ငျေ", "ṅyo": "ငျေႃ",
-    "cya": "ၸျ", "cyi": "ၸျိ", "cyī": "ၸျီ", "cyu": "ၸျု", "cyū": "ၸျူ", "cye": "ၸျေ", "cyo": "ၸျေႃ",
-    "chya": "ꧡျ", "chyi": "ꧡျိ", "chyī": "ꧡျီ", "chyu": "ꧡျု", "chyū": "ꧡျူ", "chye": "ꧡျေ", "chyo": "ꧡျေႃ",
-    "jya": "ꩡျ", "jyi": "ꩡျိ", "jyī": "ꩡျီ", "jyu": "ꩡျု", "jyū": "ꩡျူ", "jye": "ꩡျေ", "jyo": "ꩡျေႃ",
-    "jhya": "ꧢျ", "jhyi": "ꧢျိ", "jhyī": "ꧢျီ", "jhyu": "ꧢျု", "jhyū": "ꧢျူ", "jhye": "ꧢျေ", "jhyo": "ꧢျေႃ",
-    "ñya": "ၺျ", "ñyi": "ၺျိ", "ñyī": "ၺျီ", "ñyu": "ၺျု", "ñyū": "ၺျူ", "ñye": "ၺျေ", "ñyo": "ၺျေႃ",
-    "ṭya": "ꩦျ", "ṭyi": "ꩦျိ", "ṭyī": "ꩦျီ", "ṭyu": "ꩦျု", "ṭyū": "ꩦျူ", "ṭye": "ꩦျေ", "ṭyo": "ꩦျေႃ",
-    "ṭhya": "ꩧျ", "ṭhyi": "ꩧျိ", "ṭhyī": "ꩧျီ", "ṭhyu": "ꩧျု", "ṭhyū": "ꩧျူ", "ṭhye": "ꩧျေ", "ṭhyo": "ꩧျေႃ",
-    "ḍya": "ꩨျ", "ḍyi": "ꩨျိ", "ḍyī": "ꩨျီ", "ḍyu": "ꩨျု", "ḍyū": "ꩨျူ", "ḍye": "ꩨျေ", "ḍyo": "ꩨျေႃ",
-    "ḍhya": "ꩩျ", "ḍhyi": "ꩩျိ", "ḍhyī": "ꩩျီ", "ḍhyu": "ꩩျု", "ḍhyū": "ꩩျူ", "ḍhye": "ꩩျေ", "ḍhyo": "ꩩျေႃ",
-    "ṇya": "ꧣျ", "ṇyi": "ꧣျိ", "ṇyī": "ꧣျီ", "ṇyu": "ꧣျု", "ṇyū": "ꧣျူ", "ṇye": "ꧣျေ", "ṇyo": "ꧣျေႃ",
-    "tya": "တျ", "tyi": "တျိ", "tyī": "တျီ", "tyu": "တျု", "tyū": "တျူ", "tye": "တျေ", "tyo": "တျေႃ",
-    "thya": "ထျ", "thyi": "ထျိ", "thyī": "ထျီ", "thyu": "ထျု", "thyū": "ထျူ", "thye": "ထျေ", "thyo": "ထျေႃ",
-    "dya": "ၻျ", "dyi": "ၻျိ", "dyī": "ၻျီ", "dyu": "ၻျု", "dyū": "ၻျူ", "dye": "ၻျေ", "dyo": "ၻျေႃ",
-    "dhya": "ꩪျ", "dhyi": "ꩪျိ", "dhyī": "ꩪျီ", "dhyu": "ꩪျု", "dhyū": "ꩪျူ", "dhye": "ꩪျေ", "dhyo": "ꩪျေႃ",
-    "nya": "ၼျ", "nyi": "ၼျိ", "nyī": "ၼျီ", "nyu": "ၼျု", "nyū": "ၼျူ", "nye": "ၼျေ", "nyo": "ၼျေႃ",
-    "pya": "ပျ", "pyi": "ပျိ", "pyī": "ပျီ", "pyu": "ပျု", "pyū": "ပျူ", "pye": "ပျေ", "pyo": "ပျေႃ",
-    "phya": "ၽျ", "phyi": "ၽျိ", "phyī": "ၽျီ", "phyu": "ၽျု", "phyū": "ၽျူ", "phye": "ၽျေ", "phyo": "ၽျေႃ",
-    "bya": "ၿျ", "byi": "ၿျိ", "byī": "ၿျီ", "byu": "ၿျု", "byū": "ၿျူ", "bye": "ၿျေ", "byo": "ၿျေႃ",
-    "bhya": "ꧤျ", "bhyi": "ꧤျိ", "bhyī": "ꧤျီ", "bhyu": "ꧤျု", "bhyū": "ꧤျူ", "bhye": "ꧤျေ", "bhyo": "ꧤျေႃ",
-    "mya": "မျ", "myi": "မျိ", "myī": "မျီ", "myu": "မျု", "myū": "မျူ", "mye": "မျေ", "myo": "မျေႃ",
-    "sya": "သျ", "syi": "သျိ", "syī": "သျီ", "syu": "သျု", "syū": "သျူ", "sye": "သျေ", "syo": "သျေႃ",
-    "hya": "ႁျ", "hyi": "ႁျိ", "hyī": "ႁျီ", "hyu": "ႁျု", "hyū": "ႁျူ", "hye": "ႁျေ", "hyo": "ႁျေႃ",
-    "ḷya": "ꩮျ", "ḷyi": "ꩮျိ", "ḷyī": "ꩮျီ", "ḷyu": "ꩮျု", "ḷyū": "ꩮျူ", "ḷye": "ꩮျေ", "ḷyo": "ꩮျေႃ",
+const consonants = {
+  k:"ၵ", kh:"ၶ", g:"ၷ", gh:"ꧠ", ṅ:"င",
+  c:"ၸ", ch:"ꧡ", j:"ꩡ", jh:"ꧢ", ñ:"ၺ",
+  ṭ:"ꩦ", ṭh:"ꩧ", ḍ:"ꩨ", ḍh:"ꩩ", ṇ:"ꧣ",
+  t:"တ", th:"ထ", d:"ၻ", dh:"ꩪ", n:"ၼ",
+  p:"ပ", ph:"ၽ", b:"ၿ", bh:"ꧤ", m:"မ",
+  y:"ယ", r:"ရ", l:"လ", v:"ဝ", w:"ဝ", s:"သ", h:"ႁ", ḷ:"ꩮ"
+};
+for (const [c, base] of Object.entries(consonants)) {
+  for (const [v, mark] of Object.entries(vowels)) add(c + v, base + mark);
+}
+// Include a bare consonant as the user's short-a spelling.
+for (const [c, base] of Object.entries(consonants)) add(c, base);
 
-    # --- Medial Ra (ြ) Combinations with Vowels ---
-    "krā": "ၵြႃ", "khrā": "ၶြႃ", "grā": "ၷြႃ", "ghrā": "ꧠြႃ", "ṅrā": "ငြႃ",
-    "crā": "ၸြႃ", "chrā": "ꧡြႃ", "jrā": "ꩡြႃ", "jhrā": "ꧢြႃ", "ñrā": "ၺြႃ",
-    "ṭrā": "ꩦြႃ", "ṭhrā": "ꩧြႃ", "ḍrā": "ꩨြႃ", "ḍhrā": "ꩩြႃ", "ṇrā": "ꧣြႃ",
-    "trā": "တြႃ", "thrā": "ထြႃ", "drā": "ၻြႃ", "dhrā": "ꩪြႃ", "nrā": "ၼြႃ",
-    "prā": "ပြႃ", "phrā": "ၽြႃ", "brā": "ၿြႃ", "bhrā": "ꧤြႃ", "mrā": "မြႃ",
-    "yrā": "ယြႃ", "rrā": "ရြႃ", "lrā": "လြႃ", "wrā": "ဝြႃ", "srā": "သြႃ",
-    "hrā": "ႁြႃ", "ḷrā": "ꩮြႃ",
+// Medial ya and medial ra families, generated from the consonant table.
+// The mapping follows the supplied convention: consonant + ျ/ြ + vowel sign.
+for (const [c, base] of Object.entries(consonants)) {
+  for (const [v, mark] of Object.entries(vowels)) {
+    add(c + "y" + v, base + "ျ" + mark);
+    add(c + "r" + v, base + "ြ" + mark);
+  }
+}
+// Explicit long-a medial forms use the same pattern (generated above).
+// Preserve supplied special/legacy forms and conjunct mappings.
+const special = {
+  "khiā":"ၶျႃ", // original spelling retained as an alias
+  "khyā":"ၶျႃ", "kyā":"ၵျႃ", "gyā":"ၷျႃ", "ghyā":"ꧠျႃ", "ṅyā":"ငျႃ",
+  "cyā":"ၸျႃ", "chyā":"ꧡျႃ", "jyā":"ꩡျႃ", "jhyā":"ꧢျႃ", "ñyā":"ၺျႃ",
+  "ṭyā":"ꩦျႃ", "ṭhyā":"ꩧျႃ", "ḍyā":"ꩨျႃ", "ḍhyā":"ꩩျႃ", "ṇyā":"ꧣျႃ",
+  "tyā":"တျႃ", "thyā":"ထျႃ", "dyā":"ၻျႃ", "dhyā":"ꩪျႃ", "nyā":"ၼျႃ",
+  "pyā":"ပျႃ", "phyā":"ၽျႃ", "byā":"ၿျႃ", "bhyā":"ꧤျႃ", "myā":"မျႃ",
+  "syā":"သျႃ", "hyā":"ႁျႃ", "ḷyā":"ꩮျႃ",
+  "krā":"ၵြႃ", "khrā":"ၶြႃ", "grā":"ၷြႃ", "ghrā":"ꧠြႃ", "ṅrā":"ငြႃ",
+  "crā":"ၸြႃ", "chrā":"ꧡြႃ", "jrā":"ꩡြႃ", "jhrā":"ꧢြႃ", "ñrā":"ၺြႃ",
+  "ṭrā":"ꩦြႃ", "ṭhrā":"ꩧြႃ", "ḍrā":"ꩨြႃ", "ḍhrā":"ꩩြႃ", "ṇrā":"ꧣြႃ",
+  "trā":"တြႃ", "thrā":"ထြႃ", "drā":"ၻြႃ", "dhrā":"ꩪြႃ", "nrā":"ၼြႃ",
+  "prā":"ပြႃ", "phrā":"ၽြႃ", "brā":"ၿြႃ", "bhrā":"ꧤြႃ", "mrā":"မြႃ",
+  "yrā":"ယြႃ", "rrā":"ရြႃ", "lrā":"လြႃ", "wrā":"ဝြႃ", "srā":"သြႃ",
+  "hrā":"ႁြႃ", "ḷrā":"ꩮြႃ"
+};
+Object.entries(special).forEach(([r,s]) => { romanToShan[r] = s; });
 
-    "kra": "ၵြ", "kri": "ၵြိ", "krī": "ၵြီ", "kru": "ၵြု", "krū": "ၵြူ", "kre": "ၵြေ", "kro": "ၵြေႃ",
-    "khra": "ၶြ", "khri": "ၶြိ", "khrī": "ၶြီ", "khru": "ၶြု", "khrū": "ၶြူ", "khre": "ၶြေ", "khro": "ၶြေႃ",
-    "gra": "ၷြ", "gri": "ၷြိ", "grī": "ၷြီ", "gru": "ၷြု", "grū": "ၷြူ", "gre": "ၷြေ", "gro": "ၷြေႃ",
-    "ghra": "ꧠြ", "ghri": "ꧠြိ", "ghrī": "ꧠြီ", "ghru": "ꧠြု", "ghrū": "ꧠြူ", "ghre": "ꧠြေ", "ghro": "ꧠြေႃ",
-    "ṅra": "ငြ", "ṅri": "ငြိ", "ṅrī": "ငြီ", "ṅru": "ငြု", "ṅrū": "ငြူ", "ṅre": "ငြေ", "ṅro": "ငြေႃ",
-    "cra": "ၸြ", "cri": "ၸြိ", "crī": "ၸြီ", "cru": "ၸြု", "crū": "ၸြူ", "cre": "ၸြေ", "cro": "ၸြေႃ",
-    "chra": "ꧡြ", "chri": "ꧡြိ", "chrī": "ꧡြီ", "chru": "ꧡြု", "chrū": "ꧡြူ", "chre": "ꧡြေ", "chro": "ꧡြေႃ",
-    "jra": "ꩡြ", "jri": "ꩡြိ", "jrī": "ꩡြီ", "jru": "ꩡြု", "jrū": "ꩡြူ", "jre": "ꩡြေ", "jro": "ꩡြေႃ",
-    "jhra": "ꧢြ", "jhri": "ꧢြိ", "jhrī": "ꧢြီ", "jhru": "ꧢြု", "jhrū": "ꧢြူ", "jhre": "ꧢြေ", "jhro": "ꧢြေႃ",
-    "ñra": "ၺြ", "ñri": "ၺြိ", "ñrī": "ၺြီ", "ñru": "ၺြု", "ñrū": "ၺြူ", "ñre": "ၺြေ", "ñro": "ၺြေႃ",
-    "ṭra": "ꩦြ", "ṭri": "ꩦြိ", "ṭrī": "ꩦြီ", "ṭru": "ꩦြု", "ṭrū": "ꩦြူ", "ṭre": "ꩦြေ", "ṭro": "ꩦြေႃ",
-    "ṭhra": "ꩧြ", "ṭhri": "ꩧြိ", "ṭhrī": "ꩧြီ", "ṭhru": "ꩧြု", "ṭhrū": "ꩧြူ", "ṭhre": "ꩧြေ", "ṭhro": "ꩧြေႃ",
-    "ḍra": "ꩨြ", "ḍri": "ꩨြိ", "ḍrī": "ꩨြီ", "ḍru": "ꩨြု", "ḍrū": "ꩨြူ", "ḍre": "ꩨြေ", "ḍro": "ꩨြေႃ",
-    "ḍhra": "ꩩြ", "ḍhri": "ꩩြိ", "ḍhrī": "ꩩြီ", "ḍhru": "ꩩြု", "ḍhrū": "ꩩြူ", "ḍhre": "ꩩြေ", "ḍhro": "ꩩြေႃ",
-    "ṇra": "ꧣြ", "ṇri": "ꧣြိ", "ṇrī": "ꧣြီ", "ṇru": "ꧣြု", "ṇrū": "ꧣြူ", "ṇre": "ꧣြေ", "ṇro": "ꧣြေႃ",
-    "tra": "တြ", "tri": "တြိ", "trī": "တြီ", "tru": "တြု", "trū": "တြူ", "tre": "တြေ", "tro": "တြေႃ",
-    "thra": "ထြ", "thri": "ထြိ", "thrī": "ထြီ", "thru": "ထြု", "thrū": "ထြူ", "thre": "ထြေ", "thro": "ထြေႃ",
-    "dra": "ၻြ", "dri": "ၻြိ", "drī": "ၻြီ", "dru": "ၻြု", "drū": "ၻြူ", "dre": "ၻြေ", "dro": "ၻြေႃ",
-    "dhra": "ꩪြ", "dhri": "ꩪြိ", "dhrī": "ꩪြီ", "dhru": "ꩪြု", "dhrū": "ꩪြူ", "dhre": "ꩪြေ", "dhro": "ꩪြေႃ",
-    "nra": "ၼြ", "nri": "ၼြိ", "nrī": "ၼြီ", "nru": "ၼြု", "nrū": "ၼြူ", "nre": "ၼြေ", "nro": "ၼြေႃ",
-    "pra": "ပြ", "pri": "ပြိ", "prī": "ပြီ", "pru": "ပြု", "prū": "ပြူ", "pre": "ပြေ", "pro": "ပြေႃ",
-    "phra": "ၽြ", "phri": "ၽြိ", "phrī": "ၽြီ", "phru": "ၽြု", "phrū": "ၽြူ", "phre": "ၽြေ", "phro": "ၽြေႃ",
-    "bra": "ၿြ", "bri": "ၿြိ", "brī": "ၿြီ", "bru": "ၿြု", "brū": "ၿြူ", "bre": "ၿြေ", "bro": "ၿြေႃ",
-    "bhra": "ꧤြ", "bhri": "ꧤြိ", "bhrī": "ꧤြီ", "bhru": "ꧤြု", "bhrū": "ꧤြူ", "bhre": "ꧤြေ", "bhro": "ꧤြေႃ",
-    "mra": "မြ", "mri": "မြိ", "mrī": "မြီ", "mru": "မြု", "mrū": "မြူ", "mre": "မြေ", "mro": "မြေႃ",
-    "yra": "ယြ", "yri": "ယြိ", "yrī": "ယြီ", "yru": "ယြု", "yrū": "ယြူ", "yre": "ယြေ", "yro": "ယြေႃ",
-    "rra": "ရြ", "rri": "ရြိ", "rrī": "ရြီ", "rru": "ရြု", "rrū": "ရြူ", "rre": "ရြေ", "rro": "ရြေႃ",
-    "lra": "လြ", "lri": "လြိ", "lrī": "လြီ", "lru": "လြု", "lrū": "လြူ", "lre": "လြေ", "lro": "လြေႃ",
-    "wra": "ဝြ", "wri": "ဝြိ", "wrī": "ဝြီ", "wru": "ဝြု", "wrū": "ဝြူ", "wre": "ဝြေ", "wro": "ဝြေႃ",
-    "sra": "သြ", "sri": "သြိ", "srī": "သြီ", "sru": "သြု", "srū": "သြူ", "sre": "သြေ", "sro": "သြေႃ",
-    "hra": "ႁြ", "hri": "ႁြိ", "hrī": "ႁြီ", "hru": "ႁြု", "hrū": "ႁြူ", "hre": "ႁြေ", "hro": "ႁြေႃ",
-    "ḷra": "ꩮြ", "ḷri": "ꩮြိ", "ḷrī": "ꩮြီ", "ḷru": "ꩮြု", "ḷrū": "ꩮြူ", "ḷre": "ꩮြေ", "ḷro": "ꩮြေႃ",
-
-    # --- Standard Consonants with Vowels ---
-    "kha": "ၶ", "khā": "ၶႃ", "khi": "ၶိ", "khī": "ၶီ", "khu": "ၶု", "khū": "ၶူ", "khe": "ၶေ", "kho": "ၶေႃ",
-    "gha": "ꧠ", "ghā": "ꧠႃ", "ghi": "ꧠိ", "ghī": "ꧠီ", "ghu": "ꧠု", "ghū": "ꧠူ", "ghe": "ꧠေ", "gho": "ꧠေႃ",
-    "cha": "ꧡ", "chā": "ꧡႃ", "chi": "ꧡိ", "chī": "ꧡီ", "chu": "ꧡု", "chū": "ꧡူ", "che": "ꧡေ", "cho": "ꧡေႃ",
-    "jha": "ꧢ", "jhā": "ꧢႃ", "jhi": "ꧢိ", "jhī": "ꧢီ", "jhu": "ꧢု", "jhū": "ꧢူ", "jhe": "ꧢေ", "jho": "ꧢေႃ",
-    "ṭha": "ꩧ", "ṭhā": "ꩧႃ", "ṭhi": "ꩧိ", "ṭhī": "ꩧီ", "ṭhu": "ꩧု", "ṭhū": "ꩧူ", "ṭhe": "ꩧေ", "ṭho": "ꩧေႃ",
-    "ḍha": "ꩩ", "ḍhā": "ꩩႃ", "ḍhi": "ꩩိ", "ḍhī": "ꩩီ", "ḍhu": "ꩩု", "ḍhū": "ꩩူ", "ḍhe": "ꩩေ", "ḍho": "ꩩေႃ",
-    "tha": "ထ", "thā": "ထႃ", "thi": "ထိ", "thī": "ထီ", "thu": "ထု", "thū": "ထူ", "the": "ထေ", "tho": "ထေႃ",
-    "dha": "ꩪ", "dhā": "ꩪႃ", "dhi": "ꩪိ", "dhī": "ꩪီ", "dhu": "ꩪု", "dhū": "ꩪူ", "dhe": "ꩪေ", "dho": "ꩪေႃ",
-    "pha": "ၽ", "phā": "ၽႃ", "phi": "ၽိ", "phī": "ၽီ", "phu": "ၽု", "phū": "ၽူ", "phe": "ၽေ", "pho": "ၽေႃ",
-    "bha": "ꧤ", "bhā": "ꧤႃ", "bhi": "ꧤိ", "bhī": "ꧤီ", "bhu": "ꧤု", "bhū": "ꧤူ", "bhe": "ꧤေ", "bho": "ꧤေႃ",
-
-    # --- Conjuncts & Special Clusters ---
-    "kka": "ၵ်ၵ", "kkā": "ၵ်ၵႃ", "kki": "ၵ်ၵိ", "kkī": "ၵ်ၵီ", "kku": "ၵ်ၵု", "kkū": "ၵ်ၵူ", "kke": "ၵ်ၵေ", "kko": "ၵ်ၵေႃ",
-    "kkha": "ၵ်ၶ", "kkhā": "ၵ်ၶႃ", "kkhi": "ၵ်ၶိ", "kkhī": "ၵ်ၶီ", "kkhu": "ၵ်ၶု", "kkhū": "ၵ်ၶူ", "kkhe": "ၵ်ၶေ", "kkho": "ၵ်ၶေႃ",
-    "gga": "ၷ်ၷ", "ggā": "ၷ်ၷႃ", "ggi": "ၷ်ၷိ", "ggī": "ၷ်ၷီ", "ggu": "ၷ်ၷု", "ggū": "ၷ်ၷူ", "gge": "ၷ်ၷေ", "ggo": "ၷ်ၷေႃ",
-    "ṅka": "င်ၵ", "ṅkā": "င်ၵႃ", "ṅki": "င်ၵိ", "ṅkī": "င်ၵီ", "ṅku": "င်ၵု", "ṅkū": "င်ၵူ", "ṅke": "င်ၵေ", "ṅko": "င်ၵေႃ",
-    "cca": "ၸ်ၸ", "ccā": "ၸ်ၸႃ", "cci": "ၸ်ၸိ", "ccī": "ၸ်ၸီ", "ccu": "ၸ်ၸု", "ccū": "ၸ်ၸူ", "cce": "ၸ်ၸေ", "cco": "ၸ်ၸေႃ",
-    "jja": "ꩡ်ꩡ", "jjā": "ꩡ်ꩡႃ", "jji": "ꩡ်ꩡိ", "jjī": "ꩡ်ꩡီ", "jju": "ꩡ်ꩡု", "jjū": "ꩡ်ꩡူ", "jje": "ꩡ်ꩡေ", "jjo": "ꩡ်ꩡေႃ",
-    "tta": "တ်တ", "ttā": "တ်တႃ", "tti": "တ်တိ", "ttī": "တ်တီ", "ttu": "တ်တု", "ttū": "တ်တူ", "tte": "တ်တေ", "tto": "တ်တေႃ",
-    "ppa": "ပ်ပ", "ppā": "ပ်ပႃ", "ppi": "ပ်ပိ", "ppī": "ပ်ပီ", "ppu": "ပ်ပု", "ppū": "ပ်ပူ", "ppe": "ပ်ပေ", "ppo": "ပ်ပေႃ",
-    "mma": "မ်မ", "mmā": "မ်မႃ", "mmi": "မ်မိ", "mmī": "မ်မီ", "mmu": "မ်မု", "mmū": "မ်မူ", "mme": "မ်မေ", "mmo": "မ်မေႃ",
-    "lla": "လ်လ", "llā": "လ်လႃ", "lli": "လ်လိ", "llī": "လ်လီ", "llu": "လ်လု", "llū": "လ်လူ", "lle": "လ်လေ", "llo": "လ်လေႃ",
-    "ssa": "သ်သ", "ssā": "သ်သႃ", "ssi": "သ်သိ", "ssī": "သ်သီ", "ssu": "သ်သု", "ssū": "သ်သူ", "sse": "သ်သေ", "sso": "သ်သေႃ",
-
-    # --- Nigahīta Forms (Base, Conjuncts, Medials) ---
-    "kaṃ": "ၵံ", "kiṃ": "ၵိံ", "kuṃ": "ၵုံ",
-    "khaṃ": "ၶံ", "khiṃ": "ၶိံ", "khuṃ": "ၶုံ",
-    "gaṃ": "ၷံ", "giṃ": "ၷိံ", "guṃ": "ၷုံ",
-    "caṃ": "ၸံ", "ciṃ": "ၸိံ", "cuṃ": "ၸုံ",
-    "ṭaṃ": "ꩦံ", "ṭiṃ": "ꩦိံ", "ṭuṃ": "ꩦုံ",
-    "taṃ": "တံ", "tiṃ": "တိံ", "tuṃ": "တုံ",
-    "paṃ": "ပံ", "piṃ": "ပိံ", "puṃ": "ပုံ",
-    "maṃ": "မံ", "miṃ": "မိံ", "muṃ": "မုံ",
-    "yaṃ": "ယံ", "yiṃ": "ယိံ", "yuṃ": "ယုံ",
-    "raṃ": "ရံ", "riṃ": "ရိံ", "ruṃ": "ရုံ",
-    "laṃ": "လံ", "liṃ": "လိံ", "luṃ": "လုံ",
-    "saṃ": "သံ", "siṃ": "သိံ", "suṃ": "သုံ",
-    "kkaṃ": "ၵ်ၵံ", "kkiṃ": "ၵ်ၵိံ", "kkuṃ": "ၵ်ၵုံ",
-    "ttaṃ": "တ်တံ", "ttiṃ": "တ်တိံ", "ttuṃ": "တ်တုံ",
-    "ppaṃ": "ပ်ပံ", "ppiṃ": "ပ်ပိံ", "ppuṃ": "ပ်ပုံ",
-    "llaṃ": "လ်လံ", "lliṃ": "လ်လိံ", "lluṃ": "လ်လုံ",
-    "whaṃ": "ဝ်ႁံ", "whiṃ": "ဝ်ႁိံ", "whuṃ": "ဝ်ႁုံ",
-    "ssaṃ": "သ်သံ", "ssiṃ": "သ်သိံ", "ssuṃ": "သ်သုံ",
-    "smaṃ": "သ်မံ", "smiṃ": "သ်မိံ", "smuṃ": "သ်မုံ",
-    "staṃ": "သ်တံ", "stiṃ": "သ်တိံ", "stuṃ": "သ်တုံ",
-    "hmaṃ": "ႁ်မံ", "hmiṃ": "ႁ်မိံ", "hmuṃ": "ႁ်မုံ",
-    "ḷhaṃ": "ꩮ်ႁံ", "ḷhiṃ": "ꩮ်ႁိံ", "ḷhuṃ": "ꩮ်ႁုံ",
-    "mhaṃ": "မ်ႁံ", "mhiṃ": "မ်ႁိံ", "mhuṃ": "မ်ႁုံ",
-
-    # Medial Ya Nigahīta
-    "kyaṃ": "ၵျံ", "kyiṃ": "ၵျိံ", "kyuṃ": "ၵျုံ",
-    "khyaṃ": "ၶျံ", "khyiṃ": "ၶျိံ", "khyuṃ": "ၶျုံ",
-    "gyaṃ": "ၷျံ", "gyiṃ": "ၷျိံ", "gyuṃ": "ၷျုံ",
-    "ghyaṃ": "ꧠျံ", "ghyiṃ": "ꧠျိံ", "ghyuṃ": "ꧠျုံ",
-    "ṅyaṃ": "ငျံ", "ṅyiṃ": "ငျိံ", "ṅyuṃ": "ငျုံ",
-    "cyaṃ": "ၸျံ", "cyiṃ": "ၸျိံ", "cyuṃ": "ၸျုံ",
-    "chyaṃ": "ꧡျံ", "chyiṃ": "ꧡျိံ", "chyuṃ": "ꧡျုံ",
-    "jyaṃ": "ꩡျံ", "jyiṃ": "ꩡျိံ", "jyuṃ": "ꩡျုံ",
-    "jhyaṃ": "ꧢျံ", "jhyiṃ": "ꧢျိံ", "jhyuṃ": "ꧢျုံ",
-    "ñyaṃ": "ၺျံ", "ñyiṃ": "ၺျိံ", "ñyuṃ": "ၺျုံ",
-    "ṭyaṃ": "ꩦျံ", "ṭyiṃ": "ꩦျိံ", "ṭyuṃ": "ꩦျုံ",
-    "ṭhyaṃ": "ꩧျံ", "ṭhyiṃ": "ꩧျိံ", "ṭhyuṃ": "ꩧျုံ",
-    "ḍyaṃ": "ꩨျံ", "ḍyiṃ": "ꩨျိံ", "ḍyuṃ": "ꩨျုံ",
-    "ḍhyaṃ": "ꩩျံ", "ḍhyiṃ": "ꩩျိံ", "ḍhyuṃ": "ꩩျုံ",
-    "ṇaṃ": "ꧣျံ", "ṇyiṃ": "ꧣျိံ", "ṇyuṃ": "ꧣျုံ",
-    "tyaṃ": "တျံ", "tyiṃ": "တျိံ", "tyuṃ": "တျုံ",
-    "thyaṃ": "ထျံ", "thyiṃ": "ထျိံ", "thyuṃ": "ထျုံ",
-    "dyaṃ": "ၻျံ", "dyiṃ": "ၻျိံ", "dyuṃ": "ၻျုံ",
-    "dhyaṃ": "ꩪျံ", "dhyiṃ": "ꩪျိံ", "dhyuṃ": "ꩪျုံ",
-    "nyaṃ": "ၼျံ", "nyiṃ": "ၼျိံ", "nyuṃ": "ၼျုံ",
-    "pyaṃ": "ပျံ", "pyiṃ": "ပျိံ", "pyuṃ": "ပျုံ",
-    "phyaṃ": "ၽျံ", "phyiṃ": "ၽျိံ", "phyuṃ": "ၽျုံ",
-    "byaṃ": "ၿျံ", "byiṃ": "ၿျိံ", "byuṃ": "ၿျုံ",
-    "bhyaṃ": "ꧤျံ", "bhyiṃ": "ꧤျိံ", "bhuṃ": "ꧤျုံ",
-    "myaṃ": "မျံ", "myiṃ": "မျိံ", "myuṃ": "မျုံ",
-    "syaṃ": "သျံ", "syiṃ": "သျိံ", "syuṃ": "သျုံ",
-    "hyaṃ": "ႁျံ", "hyiṃ": "ႁျိံ", "hyuṃ": "ႁျုံ",
-    "ḷyaṃ": "ꩮျံ", "ḷyiṃ": "ꩮျိံ", "ḷyuṃ": "ꩮျုံ",
-
-    # Medial Ra Nigahīta
-    "kraṃ": "ၵြံ", "kriṃ": "ၵြိံ", "kruṃ": "ၵြုံ",
-    "khraṃ": "ၶြံ", "khriṃ": "ၶြိံ", "khruṃ": "ၶြုံ",
-    "graṃ": "ၷြံ", "griṃ": "ၷြိံ", "gruṃ": "ၷြုံ",
-    "ghraṃ": "ꧠြံ", "ghriṃ": "ꧠြိံ", "ghruṃ": "ꧠြုံ",
-    "ṅraṃ": "ငြံ", "ṅriṃ": "ငြိံ", "ṅruṃ": "ငြုံ",
-    "craṃ": "ၸြံ", "criṃ": "ၸြိံ", "cruṃ": "ၸြုံ",
-    "chraṃ": "ꧡြံ", "chriṃ": "ꧡြိံ", "chruṃ": "ꧡြုံ",
-    "jraṃ": "ꩡြံ", "jriṃ": "ꩡြိံ", "jruṃ": "ꩡြုံ",
-    "jhraṃ": "ꧢြံ", "jhriṃ": "ꧢြိံ", "jhruṃ": "ꧢြုံ",
-    "ñraṃ": "ၺြံ", "ñriṃ": "ၺြိံ", "ñruṃ": "ၺြုံ",
-    "ṭraṃ": "ꩦြံ", "ṭriṃ": "ꩦြိံ", "ṭruṃ": "ꩦြုံ",
-    "ṭhraṃ": "ꩧြံ", "ṭhriṃ": "ꩧြိံ", "ṭhruṃ": "ꩧြုံ",
-    "ḍraṃ": "ꩨြံ", "ḍriṃ": "ꩨြိံ", "ḍruṃ": "ꩨြုံ",
-    "ḍhraṃ": "ꩩြံ", "ḍhriṃ": "ꩩြိံ", "ḍhruṃ": "ꩩြုံ",
-    "ṇraṃ": "ꧣြံ", "ṇriṃ": "ꧣြိံ", "ṇruṃ": "ꧣြုံ",
-    "traṃ": "တြံ", "triṃ": "တြိံ", "truṃ": "တြုံ",
-    "thraṃ": "ထြံ", "thriṃ": "ထြိံ", "thruṃ": "ထြုံ",
-    "draṃ": "ၻြံ", "driṃ": "ၻြိံ", "druṃ": "ၻြုံ",
-    "dhraṃ": "ꩪြံ", "dhriṃ": "ꩪြိံ", "dhruṃ": "ꩪြုံ",
-    "nraṃ": "ၼြံ", "nriṃ": "ၼြိံ", "nruṃ": "ၼြုံ",
-    "praṃ": "ပြံ", "priṃ": "ပြိံ", "pruṃ": "ပြုံ",
-    "phraṃ": "ၽြံ", "phriṃ": "ၽြိံ", "phruṃ": "ၽြုံ",
-    "braṃ": "ၿြံ", "briṃ": "ၿြိံ", "bruṃ": "ၿြုံ",
-    "bhraṃ": "ꧤြံ", "bhriṃ": "ꧤြိံ", "bhruṃ": "ꧤြုံ",
-    "mraṃ": "မြံ", "mriṃ": "မြိံ", "mruṃ": "မြုံ",
-    "yraṃ": "ယြံ", "yriṃ": "ယြိံ", "yruṃ": "ယြုံ",
-    "rraṃ": "ရြံ", "rriṃ": "ရြိံ", "rruṃ": "ရြုံ",
-    "lraṃ": "လြံ", "lriṃ": "လြိံ", "lruṃ": "လြုံ",
-    "wraṃ": "ဝြံ", "wriṃ": "ဝြိံ", "wruṃ": "ဝြုံ",
-    "sraṃ": "သြံ", "sriṃ": "သြိံ", "sruṃ": "သြုံ",
-    "hraṃ": "ႁြံ", "hriṃ": "ႁြိံ", "hruṃ": "ႁြုံ",
-    "ḷraṃ": "ꩮြံ", "ḷriṃ": "ꩮြိံ", "ḷruṃ": "ꩮြုံ",
-
-    # --- Basic Consonants & Standard Vowels (Single) ---
-    "ka": "ၵ", "kā": "ၵႃ", "ki": "ၵိ", "kī": "ၵီ", "ku": "ၵု", "kū": "ၵူ", "ke": "ၵေ", "ko": "ၵေႃ",
-    "ga": "ၷ", "gā": "ၷႃ", "gi": "ၷိ", "gī": "ၷီ", "gu": "ၷု", "gū": "ၷူ", "ge": "ၷေ", "go": "ၷေႃ",
-    "ṅa": "င", "ṅā": "ငႃ", "ṅi": "ငိ", "ṅī": "ငီ", "ṅu": "ငု", "ṅū": "ငူ", "ṅe": "ငေ", "ṅo": "ငေႃ",
-    "ca": "ၸ", "cā": "ၸႃ", "ci": "ၸိ", "cī": "ၸီ", "cu": "ၸု", "cū": "ၸူ", "ce": "ၸေ", "co": "ၸေႃ",
-    "ja": "ꩡ", "jā": "ꩡႃ", "ji": "ꩡိ", "jī": "ꩡီ", "ju": "ꩡု", "jū": "ꩡူ", "je": "ꩡေ", "jo": "ꩡေႃ",
-    "ñi": "ၺ", "ñā": "ၺႃ", "ñī": "ၺီ", "ñu": "ၺု", "ñū": "ၺူ", "ñe": "ၺေ", "ño": "ၺေႃ",
-    "ṭa": "ꩦ", "ṭā": "ꩦႃ", "ṭi": "ꩦိ", "ṭī": "ꩦီ", "ṭu": "ꩦု", "ṭū": "ꩦူ", "ṭe": "ꩦေ", "ṭo": "ꩦေႃ",
-    "ḍa": "ꩨ", "ḍā": "ꩨႃ", "ḍi": "ꩨိ", "ḍī": "ꩨီ", "ḍu": "ꩨု", "ḍū": "ꩨူ", "ḍe": "ꩨေ", "ḍo": "ꩨေႃ",
-    "ṇa": "ꧣ", "ṇā": "ꧣႃ", "ṇi": "ꧣိ", "ṇī": "ꧣီ", "ṇu": "ꧣု", "ṇū": "ꧣူ", "ṇe": "ꧣေ", "ṇo": "ꧣေႃ",
-    "ta": "တ", "tā": "တႃ", "ti": "တိ", "tī": "တီ", "tu": "တု", "tū": "တူ", "te": "တေ", "to": "တေႃ",
-    "da": "ၻ", "dā": "ၻႃ", "di": "ၻိ", "dī": "ၻီ", "du": "ၻု", "dū": "ၻူ", "de": "ၻေ", "do": "ၻေႃ",
-    "na": "ၼ", "nā": "ၼႃ", "ni": "ၼိ", "nī": "ၼီ", "nu": "ၼု", "nū": "ၼူ", "ne": "ၼေ", "no": "ၼေႃ",
-    "pa": "ပ", "pā": "ပႃ", "pi": "ပိ", "pī": "ပီ", "pu": "ပု", "pū": "ပူ", "pe": "ပေ", "po": "ပေႃ",
-    "ba": "ၿ", "bā": "ၿႃ", "bi": "ၿိ", "bī": "ၿီ", "bu": "ၿု", "bū": "ၿူ", "be": "ၿေ", "bo": "ၿေႃ",
-    "ma": "မ", "mā": "မႃ", "mi": "မိ", "mī": "မီ", "mu": "မု", "mū": "မူ", "me": "မေ", "mo": "မေႃ",
-    "ya": "ယ", "yā": "ယႃ", "yi": "ယိ", "yī": "ယီ", "yu": "ယု", "yū": "ယူ", "ye": "ယေ", "yo": "ယေႃ",
-    "ra": "ရ", "rā": "ရႃ", "ri": "ရိ", "rī": "ရီ", "ru": "ရု", "rū": "ရူ", "re": "ရေ", "ro": "ရေႃ",
-    "la": "လ", "lā": "လႃ", "li": "လိ", "lī": "လီ", "lu": "လု", "lū": "လူ", "le": "လေ", "lo": "လေႃ",
-    "wa": "ဝ", "wā": "ဝႃ", "wi": "ဝိ", "wī": "ဝီ", "wu": "ဝု", "wū": "ဝူ", "we": "ဝေ", "wo": "ဝေႃ",
-    "sa": "သ", "sā": "သႃ", "si": "သိ", "sī": "သီ", "su": "သု", "sū": "သူ", "se": "သေ", "so": "သေႃ",
-    "ha": "ႁ", "hā": "ႁႃ", "hi": "ႁိ", "hī": "ႁီ", "hu": "ႁု", "hū": "ႁူ", "he": "ႁေ", "ho": "ႁေႃ",
-    "ḷa": "ꩮ", "ḷā": "ꩮႃ", "ḷi": "ꩮိ", "ḷī": "ꩮီ", "ḷu": "ꩮု", "ḷū": "ꩮူ", "ḷe": "ꩮေ", "ḷo": "ꩮေႃ"
+// Conjuncts listed in the supplied mapping.
+const clusters = {
+  kk:["ၵ်ၵ"], kkh:["ၵ်ၶ"], gg:["ၷ်ၷ"], ṅk:["င်ၵ"],
+  cc:["ၸ်ၸ"], jj:["ꩡ်ꩡ"], tt:["တ်တ"], pp:["ပ်ပ"],
+  mm:["မ်မ"], ll:["လ်လ"], ss:["သ်သ"],
+  wh:["ဝ်ႁ"], sm:["သ်မ"], st:["သ်တ"], hm:["ႁ်မ"],
+  "ḷh":["ꩮ်ႁ"], mh:["မ်ႁ"]
+};
+for (const [cluster, arr] of Object.entries(clusters)) {
+  const base = arr[0];
+  for (const [v, mark] of Object.entries(vowels)) add(cluster + v, base + mark);
 }
 
-# Reverse mapping automatically generated for Shan to Roman conversion
-shan_to_roman = {v: k for k, v in roman_to_shan.items()}
+// Nigahīta forms: build from supported base and medial forms.
+// Explicit additions come after generated forms where spelling needs a special form.
+for (const [c, base] of Object.entries(consonants)) {
+  add(c + "aṃ", base + "ံ");
+  add(c + "iṃ", base + "ိံ");
+  add(c + "uṃ", base + "ုံ");
+}
+for (const [c, base] of Object.entries(consonants)) {
+  for (const [v, mark] of [["a",""],["i","ိ"],["u","ု"]]) {
+    add(c + "y" + v + "ṃ", base + "ျ" + mark + "ံ");
+    add(c + "r" + v + "ṃ", base + "ြ" + mark + "ံ");
+  }
+}
+// Explicit entries from the supplied nigahīta table override generated entries.
+const nigahitaOverrides = {
+  "kyaṃ":"ၵျံ", "kyiṃ":"ၵျိံ", "kyuṃ":"ၵျုံ",
+  "khyaṃ":"ၶျံ", "khyiṃ":"ၶျိံ", "khyuṃ":"ၶျုံ",
+  "gyaṃ":"ၷျံ", "gyiṃ":"ၷျိံ", "gyuṃ":"ၷျုံ",
+  "ghyaṃ":"ꧠျံ", "ghyiṃ":"ꧠျိံ", "ghyuṃ":"ꧠျုံ",
+  "ṅyaṃ":"ငျံ", "ṅyiṃ":"ငျိံ", "ṅyuṃ":"ငျုံ",
+  "cyaṃ":"ၸျံ", "cyiṃ":"ၸျိံ", "cyuṃ":"ၸျုံ",
+  "chyaṃ":"ꧡျံ", "chyiṃ":"ꧡျိံ", "chyuṃ":"ꧡျုံ",
+  "jyaṃ":"ꩡျံ", "jyiṃ":"ꩡျိံ", "jyuṃ":"ꩡျုံ",
+  "jhyaṃ":"ꧢျံ", "jhyiṃ":"ꧢျိံ", "jhyuṃ":"ꧢျုံ",
+  "ñyaṃ":"ၺျံ", "ñyiṃ":"ၺျိံ", "ñyuṃ":"ၺျုံ",
+  "ṭyaṃ":"ꩦျံ", "ṭyiṃ":"ꩦျိံ", "ṭyuṃ":"ꩦျုံ",
+  "ṭhyaṃ":"ꩧျံ", "ṭhyiṃ":"ꩧျိံ", "ṭhyuṃ":"ꩧျုံ",
+  "ḍyaṃ":"ꩨျံ", "ḍyiṃ":"ꩨျိံ", "ḍyuṃ":"ꩨျုံ",
+  "ḍhyaṃ":"ꩩျံ", "ḍhyiṃ":"ꩩျိံ", "ḍhyuṃ":"ꩩျုံ",
+  "ṇaṃ":"ꧣံ", "ṇyiṃ":"ꧣျိံ", "ṇyuṃ":"ꧣျုံ",
+  "tyaṃ":"တျံ", "tyiṃ":"တျိံ", "tyuṃ":"တျုံ",
+  "thyaṃ":"ထျံ", "thyiṃ":"ထျိံ", "thyuṃ":"ထျုံ",
+  "dyaṃ":"ၻျံ", "dyiṃ":"ၻျိံ", "dyuṃ":"ၻျုံ",
+  "dhyaṃ":"ꩪျံ", "dhyiṃ":"ꩪျိံ", "dhyuṃ":"ꩪျုံ",
+  "nyaṃ":"ၼျံ", "nyiṃ":"ၼျိံ", "nyuṃ":"ၼျုံ",
+  "pyaṃ":"ပျံ", "pyiṃ":"ပျိံ", "pyuṃ":"ပျုံ",
+  "phyaṃ":"ၽျံ", "phyiṃ":"ၽျိံ", "phyuṃ":"ၽျုံ",
+  "byaṃ":"ၿျံ", "byiṃ":"ၿျိံ", "byuṃ":"ၿျုံ",
+  "bhyaṃ":"ꧤျံ", "bhyiṃ":"ꧤျိံ", "bhyuṃ":"ꧤျုံ",
+  "myaṃ":"မျံ", "myiṃ":"မျိံ", "myuṃ":"မျုံ",
+  "syaṃ":"သျံ", "syiṃ":"သျိံ", "syuṃ":"သျုံ",
+  "hyaṃ":"ႁျံ", "hyiṃ":"ႁျိံ", "hyuṃ":"ႁျုံ",
+  "ḷyaṃ":"ꩮျံ", "ḷyiṃ":"ꩮျိံ", "ḷyuṃ":"ꩮျုံ"
+};
+Object.entries(nigahitaOverrides).forEach(([r,s]) => { romanToShan[r] = s; });
 
-def roman_to_shan_pali(text):
-    sorted_keys = sorted(roman_to_shan.keys(), key=len, reverse=True)
-    i = 0
-    result = []
-    while i < len(text):
-        matched = False
-        for key in sorted_keys:
-            if text.startswith(key, i):
-                result.append(roman_to_shan[key])
-                i += len(key)
-                matched = True
-                break
-        if not matched:
-            result.append(text[i])
-            i += 1
-    return "".join(result)
+// A few exact forms from the supplied mapping.
+Object.assign(romanToShan, {
+  "kaṃ":"ၵံ", "kiṃ":"ၵိံ", "kuṃ":"ၵုံ",
+  "khaṃ":"ၶံ", "khiṃ":"ၶိံ", "khuṃ":"ၶုံ",
+  "gaṃ":"ၷံ", "giṃ":"ၷိံ", "guṃ":"ၷုံ",
+  "caṃ":"ၸံ", "ciṃ":"ၸိံ", "cuṃ":"ၸုံ",
+  "ṭaṃ":"ꩦံ", "ṭiṃ":"ꩦိံ", "ṭuṃ":"ꩦုံ",
+  "taṃ":"တံ", "tiṃ":"တိံ", "tuṃ":"တုံ",
+  "paṃ":"ပံ", "piṃ":"ပိံ", "puṃ":"ပုံ",
+  "maṃ":"မံ", "miṃ":"မိံ", "muṃ":"မုံ",
+  "yaṃ":"ယံ", "yiṃ":"ယိံ", "yuṃ":"ယုံ",
+  "raṃ":"ရံ", "riṃ":"ရိံ", "ruṃ":"ရုံ",
+  "laṃ":"လံ", "liṃ":"လိံ", "luṃ":"လုံ",
+  "saṃ":"သံ", "siṃ":"သိံ", "suṃ":"သုံ",
+  "kkaṃ":"ၵ်ၵံ", "kkiṃ":"ၵ်ၵိံ", "kkuṃ":"ၵ်ၵုံ",
+  "ttaṃ":"တ်တံ", "ttiṃ":"တ်တိံ", "ttuṃ":"တ်တုံ",
+  "ppaṃ":"ပ်ပံ", "ppiṃ":"ပ်ပိံ", "ppuṃ":"ပ်ပုံ",
+  "llaṃ":"လ်လံ", "lliṃ":"လ်လိံ", "lluṃ":"လ်လုံ",
+  "whaṃ":"ဝ်ႁံ", "whiṃ":"ဝ်ႁိံ", "whuṃ":"ဝ်ႁုံ",
+  "ssaṃ":"သ်သံ", "ssiṃ":"သ်သိံ", "ssuṃ":"သ်သုံ",
+  "smaṃ":"သ်မံ", "smiṃ":"သ်မိံ", "smuṃ":"သ်မုံ",
+  "staṃ":"သ်တံ", "stiṃ":"သ်တိံ", "stuṃ":"သ်တုံ",
+  "hmaṃ":"ႁ်မံ", "hmiṃ":"ႁ်မိံ", "hmuṃ":"ႁ်မုံ",
+  "ḷhaṃ":"ꩮ်ႁံ", "ḷhiṃ":"ꩮ်ႁိံ", "ḷhuṃ":"ꩮ်ႁုံ",
+  "mhaṃ":"မ်ႁံ", "mhiṃ":"မ်ႁိံ", "mhuṃ":"မ်ႁုံ"
+});
 
-def shan_to_roman_pali(text):
-    sorted_keys = sorted(shan_to_roman.keys(), key=len, reverse=True)
-    i = 0
-    result = []
-    while i < len(text):
-        matched = False
-        for key in sorted_keys:
-            if text.startswith(key, i):
-                result.append(shan_to_roman[key])
-                i += len(key)
-                matched = True
-                break
-        if not matched:
-            result.append(text[i])
-            i += 1
-    return "".join(result)
+// Longest-match conversion. Unknown characters are passed through unchanged.
+const romanKeys = Object.keys(romanToShan).sort((a,b) => b.length-a.length);
+function convertRomanToShan(input) {
+  let out = "";
+  for (let i=0; i<input.length;) {
+    let match = "";
+    for (const key of romanKeys) {
+      if (input.startsWith(key, i)) { match = key; break; }
+    }
+    if (match) { out += romanToShan[match]; i += match.length; }
+    else { out += input[i]; i++; }
+  }
+  return out;
+}
 
-# --- Test Execution ---
-if __name__ == "__main__":
-    print("=== Pali Converter Tested ===")
-    
-    # Test Roman to Shan
-    roman_text = "kyaṃ khraṃ kaṃ"
-    shan_result = roman_to_shan_pali(roman_text)
-    print(f"Roman Input: {roman_text}")
-    print(f"Shan Output: {shan_result}\n")
-    
-    # Test Shan to Roman
-    shan_text = "ၵျံ ၶြံ ၵံ"
-    roman_result = shan_to_roman_pali(shan_text)
-    print(f"Shan Input: {shan_text}")
-    print(f"Roman Output: {roman_result}")    "khya": "ၶျ", "khyi": "ၶျိ", "khyī": "ၶျီ", "khyu": "ၶျု", "khyū": "ၶျူ", "khye": "ၶျေ", "khyo": "ၶျေႃ",
-    "gya": "ၷျ", "gyi": "ၷျိ", "gyī": "ၷျီ", "gyu": "ၷျု", "gyū": "ၷျူ", "gye": "ၷျေ", "gyo": "ၷျေႃ",
-    "ghya": "ꧠျ", "ghyi": "ꧠျိ", "ghyī": "ꧠျီ", "ghyu": "ꧠျု", "ghyū": "ꧠျူ", "ghye": "ꧠျေ", "ghyo": "ꧠျေႃ",
+// Keep the first Roman spelling for each Shan string to avoid accidental
+// replacement of earlier reverse entries by later duplicate values.
+const shanToRoman = Object.create(null);
+for (const [roman, shan] of Object.entries(romanToShan)) {
+  if (!(shan in shanToRoman)) shanToRoman[shan] = roman;
+}
+const shanKeys = Object.keys(shanToRoman).sort((a,b) => b.length-a.length);
+function convertShanToRoman(input) {
+  let out = "";
+  for (let i=0; i<input.length;) {
+    let match = "";
+    for (const key of shanKeys) {
+      if (input.startsWith(key, i)) { match = key; break; }
+    }
+    if (match) { out += shanToRoman[match]; i += match.length; }
+    else { out += input[i]; i++; }
+  }
+  return out;
+}
+
+let direction = "roman";
+const input = document.getElementById("input");
+const output = document.getElementById("output");
+const status = document.getElementById("status");
+const romanMode = document.getElementById("romanMode");
+const shanMode = document.getElementById("shanMode");
+function setDirection(next) {
+  direction = next;
+  romanMode.classList.toggle("active", direction === "roman");
+  shanMode.classList.toggle("active", direction === "shan");
+  document.getElementById("inputLabel").textContent = direction === "roman" ? "Roman Pali input" : "Shan Pali input";
+  document.getElementById("outputLabel").textContent = direction === "roman" ? "Shan Pali output" : "Roman Pali output";
+  input.placeholder = direction === "roman" ? "Type or paste Roman Pali here…" : "Type or paste Shan Pali here…";
+  output.placeholder = direction === "roman" ? "Shan Pali result will appear here…" : "Roman Pali result will appear here…";
+  output.value = "";
+  status.textContent = "";
+}
+function runConversion() {
+  output.value = direction === "roman" ? convertRomanToShan(input.value) : convertShanToRoman(input.value);
+  status.textContent = input.value ? "Conversion complete." : "Enter some text to convert.";
+}
+romanMode.addEventListener("click", () => setDirection("roman"));
+shanMode.addEventListener("click", () => setDirection("shan"));
+document.getElementById("convert").addEventListener("click", runConversion);
+document.getElementById("swap").addEventListener("click", () => {
+  const oldInput = input.value;
+  const oldOutput = output.value;
+  setDirection(direction === "roman" ? "shan" : "roman");
+  input.value = oldOutput || oldInput;
+  runConversion();
+});
+document.getElementById("clear").addEventListener("click", () => {
+  input.value = ""; output.value = ""; status.textContent = ""; input.focus();
+});
+document.getElementById("copy").addEventListener("click", async () => {
+  if (!output.value) { status.textContent = "There is no output to copy."; return; }
+  try {
+    await navigator.clipboard.writeText(output.value);
+    status.textContent = "Output copied.";
+  } catch {
+    output.focus(); output.select();
+    const ok = document.execCommand("copy");
+    status.textContent = ok ? "Output copied." : "Select the output and copy it manually.";
+  }
+});
+document.getElementById("useOutput").addEventListener("click", () => {
+  input.value = output.value; output.value = ""; status.textContent = "Output moved to input.";
+  input.focus();
+});
+input.addEventListener("input", runConversion);
+</script>
+</body>
+</html>
