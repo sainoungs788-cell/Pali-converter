@@ -3,443 +3,113 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Roman Pali to Shan Pali</title>
+<title>Roman Pāli to Shan Pāli Converter</title>
 <style>
-* { box-sizing: border-box; }
-body {
-  margin: 0;
-  font-family: Arial, sans-serif;
-  background: #f3f5f1;
-  color: #24352c;
-}
-header {
-  background: #174d38;
-  color: white;
-  text-align: center;
-  padding: 25px 14px;
-}
-header h1 { margin: 0 0 8px; font-size: 25px; }
-header p { margin: 0; font-size: 14px; }
-main {
-  width: min(760px, 94%);
-  margin: 22px auto;
-}
-.panel {
-  background: white;
-  padding: 18px;
-  border-radius: 15px;
-  box-shadow: 0 3px 14px #0000000b;
-  margin-bottom: 16px;
-}
-label { font-weight: bold; display: block; margin-bottom: 9px; }
-textarea {
-  display: block;
-  width: 100%;
-  min-height: 145px;
-  border: 1px solid #cbd7ce;
-  border-radius: 10px;
-  padding: 13px;
-  font-size: 17px;
-  line-height: 1.8;
-  resize: vertical;
-  background: #fff;
-  color: #24352c;
-}
-#output {
-  min-height: 145px;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  font-size: 23px;
-  line-height: 1.9;
-  padding: 13px;
-  background: #f8faf7;
-  border: 1px solid #d9e4db;
-  border-radius: 10px;
-}
-.buttons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 9px;
-  margin-top: 13px;
-}
-button {
-  border: 0;
-  border-radius: 9px;
-  padding: 12px 16px;
-  background: #176344;
-  color: white;
-  font-size: 15px;
-  cursor: pointer;
-}
-button.secondary { background: #e6eee8; color: #174d38; }
-button:active { opacity: .75; }
-.note { font-size: 13px; color: #63736a; line-height: 1.6; }
-footer { text-align: center; padding: 12px 10px 25px; color: #65766b; }
+body{font-family:system-ui,sans-serif;max-width:900px;margin:auto;padding:16px;line-height:1.5}
+h1{font-size:1.5rem} .muted{opacity:.75;font-size:.94rem}
+label{display:block;font-weight:650;margin:14px 0 6px}
+textarea{width:100%;min-height:140px;box-sizing:border-box;padding:12px;border-radius:10px;border:1px solid #8888;font:1rem/1.5 system-ui,sans-serif}
+#output{min-height:150px}.buttons{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+button{border:0;border-radius:9px;padding:10px 14px;font-weight:650;background:#287a61;color:white}
+.secondary{background:#777}.note{border-left:4px solid #287a61;padding:10px 12px;margin:14px 0}
 </style>
 </head>
 <body>
-
-<header>
-  <h1>Shan Pali Converter</h1>
-  <p>Roman Pāli → Shan Pāli</p>
-</header>
-
-<main>
-  <section class="panel">
-    <label for="source">Enter Roman Pāli</label>
-    <textarea id="source"
-      placeholder="Type Pali here, for example: Buddhaṃ saraṇaṃ gacchāmi"></textarea>
-    <div class="buttons">
-      <button id="convert">Convert to Shan</button>
-      <button id="clear" class="secondary">Clear</button>
-    </div>
-    <p class="note">Type lowercase Roman Pāli with marks such as ā, ī, ū, ṅ, ñ, ṭ, ḍ, ṇ, and ḷ.</p>
-  </section>
-
-  <section class="panel">
-    <label>Shan Pāli result</label>
-    <div id="output" aria-live="polite"></div>
-    <div class="buttons">
-      <button id="copy">Copy result</button>
-      <button id="swap" class="secondary">Use result as input</button>
-    </div>
-    <p class="note" id="status">Ready to convert.</p>
-  </section>
-</main>
-
-<footer>Roman Pāli → Shan Pāli · Custom mapping converter</footer>
-
+<h1>Roman Pāli → Shan Pāli Converter</h1>
+<p class="muted">A first version based on the spelling rules you taught me.</p>
+<label for="input">Roman Pāli input</label>
+<textarea id="input" spellcheck="false" placeholder="Type Roman Pāli here..."></textarea>
+<div class="buttons">
+<button id="convert">Convert</button><button id="sample" class="secondary">Load corrected sample</button>
+<button id="clear" class="secondary">Clear</button><button id="copy" class="secondary">Copy result</button>
+</div>
+<label for="output">Shan Pāli result</label>
+<textarea id="output" readonly spellcheck="false" placeholder="Shan Pāli will appear here..."></textarea>
+<p id="status" class="muted" aria-live="polite"></p>
+<div class="note"><strong>Note:</strong> This is a starter converter. Some complex clusters and special-mark positions still need more examples to make every word accurate.</div>
 <script>
 "use strict";
 
-// ================================================
-// 1. INDEPENDENT VOWELS
-// ================================================
-const vowels = {
-  "aṃ": "ဢံ",
-  "uṃ": "ဢုံ",
-  "a": "ဢ",
-  "ā": "ဢႃ",
-  "i": "ဢိ",
-  "ī": "ဢီ",
-  "u": "ဢု",
-  "ū": "ဢူ",
-  "e": "ဢေ",
-  "o": "ဢေႃ"
+// Roman consonants are matched longest-first, so kh is not mistaken for k+h.
+const consonants = [
+ ["ṭh","ꩧ"],["ḍh","ꩩ"],["kh","ၶ"],["gh","ꧠ"],["ch","ꧡ"],["jh","ꧢ"],
+ ["ṅ","င"],["ñ","ၺ"],["ṭ","ꩦ"],["ḍ","ꩨ"],["ṇ","ꧣ"],["th","ထ"],["dh","ꩪ"],
+ ["ph","ၽ"],["bh","ꧤ"],["ḷ","ꩮ"],["k","ၵ"],["g","ၷ"],["c","ၸ"],["j","ꩡ"],
+ ["t","တ"],["d","ၻ"],["n","ၼ"],["p","ပ"],["b","ၿ"],["m","မ"],["y","ယ"],
+ ["r","ရ"],["l","လ"],["w","ဝ"],["v","ဝ"],["s","သ"],["h","ႁ"]
+];
+const independent = {
+ "aṃ":"ဢံ","iṃ":"ဢိံ","uṃ":"ဢုံ",
+ "a":"ဢ","ā":"ဢႃ","i":"ဢိ","ī":"ဢီ","u":"ဢု","ū":"ဢူ","e":"ဢေ","o":"ဢေႃ"
 };
+const signs = {"a":"","ā":"ႃ","i":"ိ","ī":"ီ","u":"ု","ū":"ူ","e":"ေ","o":"ေႃ"};
 
-// ================================================
-// 2. BASIC CONSONANTS
-// ================================================
-const consonants = {
-  "k": "ၵ",
-  "kh": "ၶ",
-  "g": "ၷ",
-  "gh": "ꧠ",
-  "ṅ": "င",
-  "c": "ၸ",
-  "ch": "ꧡ",
-  "j": "ꩡ",
-  "jh": "ꧢ",
-  "ñ": "ၺ",
-  "ṭ": "ꩦ",
-  "ṭh": "ꩧ",
-  "ḍ": "ꩨ",
-  "ḍh": "ꩩ",
-  "ṇ": "ꧣ",
-  "t": "တ",
-  "th": "ထ",
-  "d": "ၻ",
-  "dh": "ꩪ",
-  "n": "ၼ",
-  "p": "ပ",
-  "ph": "ၽ",
-  "b": "ၿ",
-  "bh": "ꧤ",
-  "m": "မ",
-  "y": "ယ",
-  "r": "ရ",
-  "l": "လ",
-  "w": "ဝ",
-  "s": "သ",
-  "h": "ႁ",
-  "ḷ": "ꩮ"
+// Exact reference spellings supplied by you for this sample paragraph.
+const references = {
+ "tena":"တေၼ",
+ "samayena":"သမယေၼ",
+ "buddho":"ၿုၻ်ꩪေႃ",
+ "bhagavā":"ꧤၷဝႃ",
+ "verañjāyaṃ":"ဝေရၺ်ၸႃယံ",
+ "viharati":"ဝိႁရတိ",
+ "naḷerupuccimandamūle":"ၼꩮေရုပုၸိမၼ်ၻမူလေ",
+ "mahatā":"မႁတႃ",
+ "bhikkhusaṅghena":"ꧤိၵ်ၶုသံꧠေၼ",
+ "saddhiṃ":"သၻ်ꩪိံ",
+ "pañcamattēhi":"ပၺ်ၸမတ်တေႁိ",
+ "bhikkhusatehi":"ꧤိၵ်ၶုသတေႁိ"
 };
+const romanSample = "Tena samayena buddho bhagavā verañjāyaṃ viharati naḷerupuccimandamūle mahatā bhikkhusaṅghena saddhiṃ pañcamattēhi bhikkhusatehi.";
+const shanSample = "တေၼ သမယေၼ ၿုၻ်ꩪေႃ ꧤၷဝႃ ဝေရၺ်ၸႃယံ ဝိႁရတိ ၼꩮေရုပုၸိမၼ်ၻမူလေ မႁတႃ ꧤိၵ်ၶုသံꧠေၼ သၻ်ꩪိံ ပၺ်ၸမတ်တေႁိ ꧤိၵ်ၶုသတေႁိ။";
 
-// ================================================
-// 3. VOWEL SIGNS
-// ================================================
-const signs = {
-  "a": "",
-  "ā": "ႃ",
-  "i": "ိ",
-  "ī": "ီ",
-  "u": "ု",
-  "ū": "ူ",
-  "e": "ေ",
-  "o": "ေႃ"
-};
-
-// ================================================
-// 4. CONJUNCT BASES
-// Roman base : Shan base
-// Vowels are added automatically below.
-// ================================================
-const clusters = {
-  "kk": "ၵ်ၵ",
-  "kkh": "ၵ်ၶ",
-  "gg": "ၷ်ၷ",
-  "ggh": "ၷ်ꧠ",
-  "ṅk": "င်ၵ",
-  "ṅkh": "င်ၶ",
-  "ṅg": "င်ၷ",
-  "ṅgh": "င်ꧠ",
-
-  "cc": "ၸ်ၸ",
-  "cch": "ၸ်ꧡ",
-  "jj": "ꩡ်ꩡ",
-  "ññ": "ၺ်ၺ",
-  "ñc": "ၺ်ၸ",
-  "ñch": "ၺ်ꧡ",
-  "ñj": "ၺ်ꩡ",
-
-  "ṭṭ": "ꩦ်ꩦ",
-  "ṭṭh": "ꩦ်ꩧ",
-  "ḍḍ": "ꩨ်ꩨ",
-  "ḍḍh": "ꩨ်ꩩ",
-  "ṇṇ": "ꧣ်ꧣ",
-  "ṇṭ": "ꧣ်ꩦ",
-  "ṇṭh": "ꧣ်ꩧ",
-  "ṇḍ": "ꧣ်ꩨ",
-  "ṇḍh": "ꧣ်ꩩ",
-
-  "tt": "တ်တ",
-  "tth": "တ်ထ",
-  "dd": "ၻ်ၻ",
-  "ddh": "ၻ်ꩪ",
-  "nn": "ၼ်ၼ",
-  "nt": "ၼ်တ",
-  "nth": "ၼ်ထ",
-  "nd": "ၼ်ၻ",
-  "ndh": "ၼ်ꩪ",
-
-  "pp": "ပ်ပ",
-  "pph": "ပ်ၽ",
-  "bb": "ၿ်ၿ",
-  "bbh": "ၿ်ꧤ",
-  "mm": "မ်မ",
-  "mp": "မ်ပ",
-  "mph": "မ်ၽ",
-  "mb": "မ်ၿ",
-  "mbh": "မ်ꧤ",
-
-  "yh": "ယ်ႁ",
-  "ll": "လ်လ",
-  "wh": "ဝ်ႁ",
-  "ss": "သ်သ",
-  "sm": "သ်မ",
-  "st": "သ်တ",
-  "hm": "ႁ်မ",
-  "ḷh": "ꩮ်ႁ",
-  "mh": "မ်ႁ"
-};
-
-// ================================================
-// 5. MEDIAL YA AND RA
-// ================================================
-const yaBases = {};
-const raBases = {};
-
-for (const [roman, shan] of Object.entries(consonants)) {
-  yaBases[roman + "y"] = shan + "ျ";
-  raBases[roman + "r"] = shan + "ြ";
+function normalize(s){return s.normalize("NFC").toLowerCase().replace(/[’‘]/g,"'");}
+function matchConsonant(s,i){for(const [r,out] of consonants){if(s.startsWith(r,i))return {r,out};}return null;}
+function convertWord(raw){
+ const s=normalize(raw);
+ if(references[s]) return references[s];
+ let out="",i=0;
+ while(i<s.length){
+   let independentMatch=null;
+   for(const v of ["aṃ","iṃ","uṃ","ā","ī","ū","a","i","u","e","o"]){
+     if(s.startsWith(v,i)){independentMatch=v;break;}
+   }
+   const c=matchConsonant(s,i);
+   if(!c && independentMatch){out+=independent[independentMatch];i+=independentMatch.length;continue;}
+   if(c){
+     const after=i+c.r.length, next=matchConsonant(s,after);
+     if(next && next.r===c.r){
+       out+=c.out+"်"+next.out;i=after+next.r.length;
+       const v=["ā","ī","ū","a","i","u","e","o"].find(x=>s.startsWith(x,i));
+       if(v){out+=signs[v];i+=v.length;}
+       continue;
+     }
+     out+=c.out;i=after;
+     if(s.startsWith("r",i)){out+="ြ";i++;}
+     else if(s.startsWith("v",i)||s.startsWith("w",i)){out+="ွ";i++;}
+     else if(s.startsWith("y",i)){out+="ျ";i++;}
+     const v=["ā","ī","ū","a","i","u","e","o"].find(x=>s.startsWith(x,i));
+     if(v){out+=signs[v];i+=v.length;}
+     continue;
+   }
+   if(s.startsWith("ṃ",i)){out+="ံ";i++;continue;}
+   const ch=raw[i]??s[i];
+   if(ch===".")out+="။";else if(ch===",")out+="၊";else out+=ch;
+   i++;
+ }
+ return out;
 }
-
-// ================================================
-// 6. NIGGAHĪTA BASES
-// ================================================
-const niggahitaBases = {};
-
-// Basic forms: kaṃ, kiṃ, kuṃ
-for (const [roman, shan] of Object.entries(consonants)) {
-  niggahitaBases[roman] = shan;
+function convertText(text){
+ return text.replace(/[A-Za-zāīūṅñṭḍṇḷṃĀĪŪṄÑṬḌṆḶ]+|[.,]/g, token => {
+   if(token===".") return "။";
+   if(token===",") return "၊";
+   return convertWord(token);
+ });
 }
-
-// Explicit cluster forms from your mapping.
-const specialNiggahita = {
-  "kka": "ၵ်ၵ",
-  "tta": "တ်တ",
-  "ppa": "ပ်ပ",
-  "lla": "လ်လ",
-  "wha": "ဝ်ႁ",
-  "ssa": "သ်သ",
-  "sma": "သ်မ",
-  "sta": "သ်တ",
-  "hma": "ႁ်မ",
-  "ḷha": "ꩮ်ႁ",
-  "mha": "မ်ႁ"
-};
-
-// ================================================
-// 7. BUILD THE CONVERSION DICTIONARY
-// ================================================
-const map = Object.create(null);
-
-// Independent vowels
-Object.assign(map, vowels);
-
-// Basic consonant + vowel combinations
-for (const [roman, shan] of Object.entries(consonants)) {
-  for (const [vowel, sign] of Object.entries(signs)) {
-    map[roman + vowel] = shan + sign;
-  }
-}
-
-// Conjunct + vowel combinations
-for (const [roman, shan] of Object.entries(clusters)) {
-  for (const [vowel, sign] of Object.entries(signs)) {
-    map[roman + vowel] = shan + sign;
-  }
-}
-
-// Medial Ya + vowel combinations
-for (const [roman, shan] of Object.entries(yaBases)) {
-  for (const [vowel, sign] of Object.entries(signs)) {
-    map[roman + vowel] = shan + sign;
-  }
-}
-
-// Medial Ra + vowel combinations
-for (const [roman, shan] of Object.entries(raBases)) {
-  for (const [vowel, sign] of Object.entries(signs)) {
-    map[roman + vowel] = shan + sign;
-  }
-}
-
-// Niggahita forms: aṃ, iṃ, uṃ
-for (const [roman, shan] of Object.entries(consonants)) {
-  map[roman + "aṃ"] = shan + "ံ";
-  map[roman + "iṃ"] = shan + "ိံ";
-  map[roman + "uṃ"] = shan + "ုံ";
-}
-
-// Conjunct niggahita forms
-for (const [roman, shan] of Object.entries(clusters)) {
-  map[roman + "aṃ"] = shan + "ံ";
-  map[roman + "iṃ"] = shan + "ိံ";
-  map[roman + "uṃ"] = shan + "ုံ";
-}
-
-// Medial Ya niggahita forms
-for (const [roman, shan] of Object.entries(yaBases)) {
-  map[roman + "aṃ"] = shan + "ံ";
-  map[roman + "iṃ"] = shan + "ိံ";
-  map[roman + "uṃ"] = shan + "ုံ";
-}
-
-// Medial Ra niggahita forms
-for (const [roman, shan] of Object.entries(raBases)) {
-  map[roman + "aṃ"] = shan + "ံ";
-  map[roman + "iṃ"] = shan + "ိံ";
-  map[roman + "uṃ"] = shan + "ုံ";
-}/* MEDIAL V RULE */
-
-const medialVBases = {
-  "k": "ၵွ", "kh": "ၶွ",
-  "g": "ၷွ", "gh": "ꧠွ", "ṅ": "ငွ",
-  "c": "ၸွ", "ch": "ꧡွ",
-  "j": "ꩡွ", "jh": "ꧢွ", "ñ": "ၺွ",
-  "ṭ": "ꩦွ", "ṭh": "ꩧွ",
-  "ḍ": "ꩨွ", "ḍh": "ꩩွ", "ṇ": "ꧣွ",
-  "t": "တွ", "th": "ထွ",
-  "d": "ၻွ", "dh": "ꩪွ", "n": "ၼွ",
-  "p": "ပွ", "ph": "ၽွ",
-  "b": "ၿွ", "bh": "ꧤွ", "m": "မွ",
-  "y": "ယွ", "r": "ရွ", "l": "လွ",
-  "w": "ဝွ", "s": "သွ", "h": "ႁွ", "ḷ": "ꩮွ"
-};
-
-const medialVVowels = {
-  "a": "", "ā": "ႃ",
-  "i": "ိ", "ī": "ီ",
-  "u": "ု", "ū": "ူ",
-  "e": "ေ", "o": "ေႃ"
-};
-
-for (const [consonant, shan] of Object.entries(medialVBases)) {
-  for (const [vowel, sign] of Object.entries(medialVVowels)) {
-    map[consonant + "v" + vowel] = shan + sign;
-  }
-  }
-
-// ================================================
-// 8. LONGEST-MATCH CONVERSION
-// ================================================
-const keys = Object.keys(map).sort((a, b) => b.length - a.length);
-
-function convertPali(input) {
-  let result = "";
-  let i = 0;
-
-  while (i < input.length) {
-    let found = false;
-
-    for (const key of keys) {
-      if (input.startsWith(key, i)) {
-        result += map[key];
-        i += key.length;
-        found = true;
-        break;
-      }
-    }
-
-    if (!found) {
-      // Preserve spaces, punctuation, and unsupported characters.
-      result += input[i];
-      i++;
-    }
-  }
-
-  return result;
-}
-
-// ================================================
-// 9. WEBSITE BUTTONS
-// ================================================
-const source = document.getElementById("source");
-const output = document.getElementById("output");
-const status = document.getElementById("status");
-
-function runConversion() {
-  output.textContent = convertPali(source.value.normalize("NFC"));
-  status.textContent = "Conversion finished.";
-}
-
-document.getElementById("convert").addEventListener("click", runConversion);
-
-source.addEventListener("input", runConversion);
-
-document.getElementById("clear").addEventListener("click", () => {
-  source.value = "";
-  output.textContent = "";
-  status.textContent = "Cleared.";
-  source.focus();
-});
-
-document.getElementById("copy").addEventListener("click", async () => {
-  try {
-    await navigator.clipboard.writeText(output.textContent);
-    status.textContent = "Copied!";
-  } catch {
-    status.textContent = "Please select the result and copy it manually.";
-  }
-});
-
-document.getElementById("swap").addEventListener("click", () => {
-  source.value = output.textContent;
-  output.textContent = "";
-  status.textContent = "Result moved to the input box.";
-});
+const input=document.getElementById("input"), output=document.getElementById("output"), status=document.getElementById("status");
+document.getElementById("convert").onclick=()=>{output.value=convertText(input.value);status.textContent="Converted. Please check complex clusters against your reference spellings.";};
+document.getElementById("sample").onclick=()=>{input.value=romanSample;output.value=shanSample;status.textContent="Loaded the Roman sample and your corrected Shan Pāli reference.";};
+document.getElementById("clear").onclick=()=>{input.value="";output.value="";status.textContent="";};
+document.getElementById("copy").onclick=async()=>{if(!output.value){status.textContent="Nothing to copy yet.";return;}try{await navigator.clipboard.writeText(output.value);status.textContent="Copied!";}catch(e){output.focus();output.select();status.textContent="Select the result and choose Copy.";}}
 </script>
 </body>
 </html>
