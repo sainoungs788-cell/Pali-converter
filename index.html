@@ -343,7 +343,35 @@ for (const [roman, shan] of Object.entries(raBases)) {
   map[roman + "aṃ"] = shan + "ံ";
   map[roman + "iṃ"] = shan + "ိံ";
   map[roman + "uṃ"] = shan + "ုံ";
-}
+}/* MEDIAL V RULE */
+
+const medialVBases = {
+  "k": "ၵွ", "kh": "ၶွ",
+  "g": "ၷွ", "gh": "ꧠွ", "ṅ": "ငွ",
+  "c": "ၸွ", "ch": "ꧡွ",
+  "j": "ꩡွ", "jh": "ꧢွ", "ñ": "ၺွ",
+  "ṭ": "ꩦွ", "ṭh": "ꩧွ",
+  "ḍ": "ꩨွ", "ḍh": "ꩩွ", "ṇ": "ꧣွ",
+  "t": "တွ", "th": "ထွ",
+  "d": "ၻွ", "dh": "ꩪွ", "n": "ၼွ",
+  "p": "ပွ", "ph": "ၽွ",
+  "b": "ၿွ", "bh": "ꧤွ", "m": "မွ",
+  "y": "ယွ", "r": "ရွ", "l": "လွ",
+  "w": "ဝွ", "s": "သွ", "h": "ႁွ", "ḷ": "ꩮွ"
+};
+
+const medialVVowels = {
+  "a": "", "ā": "ႃ",
+  "i": "ိ", "ī": "ီ",
+  "u": "ု", "ū": "ူ",
+  "e": "ေ", "o": "ေႃ"
+};
+
+for (const [consonant, shan] of Object.entries(medialVBases)) {
+  for (const [vowel, sign] of Object.entries(medialVVowels)) {
+    map[consonant + "v" + vowel] = shan + sign;
+  }
+  }
 
 // ================================================
 // 8. LONGEST-MATCH CONVERSION
